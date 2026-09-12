@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -11,13 +13,82 @@ import '../../widgets/metric_tile.dart';
 import '../profiles/profile_editor_page.dart';
 import 'scan_controller.dart';
 
-class ScanPage extends ConsumerWidget {
+/// Zaslon vaganja. Skeniranje se pokreće samo od sebe dok je zaslon otvoren i
+/// aplikacija u prvom planu — korisnik ne mora ništa tapnuti — a prestaje čim
+/// ode na drugu karticu ili u pozadinu, da vaga ne troši bateriju uzalud.
+class ScanPage extends ConsumerStatefulWidget {
   const ScanPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ScanPage> createState() => _ScanPageState();
+}
+
+class _ScanPageState extends ConsumerState<ScanPage>
+    with WidgetsBindingObserver {
+  /// Korisnik je sam prekinuo traženje; tada se ne pokreće ponovno dok to
+  /// izričito ne zatraži ili se ne vrati na zaslon.
+  bool _stoppedByUser = false;
+  bool _foreground = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final foreground = state == AppLifecycleState.resumed;
+    if (foreground == _foreground) return;
+    _foreground = foreground;
+    if (foreground) _stoppedByUser = false;
+    _syncScanning();
+  }
+
+  /// Usklađuje skener sa stanjem zaslona. Poziva se nakon svakog crtanja, pa
+  /// pokriva i promjenu kartice i dolazak prvog profila.
+  void _syncScanning() {
+    if (!mounted) return;
+
+    final controller = ref.read(scanControllerProvider.notifier);
+    final state = ref.read(scanControllerProvider);
+    final hasProfiles =
+        (ref.read(profilesProvider).value ?? const <Profile>[]).isNotEmpty;
+    final isVisible = ref.read(selectedTabProvider) == 0;
+    final shouldScan =
+        hasProfiles && isVisible && _foreground && !_stoppedByUser;
+
+    if (shouldScan && state is ScanIdle) {
+      unawaited(controller.start());
+    } else if (!shouldScan && (state is ScanWaiting || state is ScanLive)) {
+      unawaited(controller.stop());
+    }
+  }
+
+  Future<void> _stopByUser() async {
+    _stoppedByUser = true;
+    await ref.read(scanControllerProvider.notifier).stop();
+  }
+
+  Future<void> _startByUser() async {
+    _stoppedByUser = false;
+    await ref.read(scanControllerProvider.notifier).start();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(scanControllerProvider);
     final controller = ref.read(scanControllerProvider.notifier);
+    // Kartica i popis profila utječu na to smije li se skenirati.
+    ref.watch(selectedTabProvider);
+    ref.watch(profilesProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncScanning());
 
     return Scaffold(
       appBar: AppBar(title: const Text('Vaganje')),
@@ -25,12 +96,12 @@ class ScanPage extends ConsumerWidget {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: switch (state) {
-            ScanIdle() => _IdleView(onStart: controller.start),
-            ScanWaiting() => _WaitingView(onCancel: controller.stop),
+            ScanIdle() => _IdleView(onStart: _startByUser),
+            ScanWaiting() => _WaitingView(onCancel: _stopByUser),
             ScanLive(:final weightKg, :final isStabilized) => _LiveView(
                 weightKg: weightKg,
                 isStabilized: isStabilized,
-                onCancel: controller.stop,
+                onCancel: _stopByUser,
               ),
             ScanNeedsProfile(:final reading, :final candidates) => _ProfilePicker(
                 weightKg: reading.weightKg,
@@ -48,7 +119,7 @@ class ScanPage extends ConsumerWidget {
             ScanFailed(:final message, :final status) => _FailureView(
                 message: message,
                 status: status,
-                onRetry: controller.start,
+                onRetry: _startByUser,
               ),
           },
         ),
@@ -80,9 +151,12 @@ class _IdleView extends ConsumerWidget {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Vaga ne traži uparivanje. Pokreni mjerenje, stani bos na vagu '
-          'i pričekaj da se težina umiri.',
+        Text(
+          profiles.isEmpty
+              ? 'Vaga ne traži uparivanje, ali mjerenje mora imati kome '
+                  'pripasti. Dodaj profil pa stani bos na vagu.'
+              : 'Traženje je zaustavljeno. Nastavi pa stani bos na vagu i '
+                  'pričekaj da se težina umiri.',
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 32),
@@ -100,7 +174,7 @@ class _IdleView extends ConsumerWidget {
           FilledButton.icon(
             onPressed: onStart,
             icon: const Icon(Icons.play_arrow),
-            label: const Text('Započni mjerenje'),
+            label: const Text('Nastavi traženje'),
           ),
       ],
     );

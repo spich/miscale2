@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'features/history/history_page.dart';
 import 'features/profiles/profiles_page.dart';
 import 'features/scan/scan_page.dart';
 import 'features/settings/settings_page.dart';
+import 'providers.dart';
 
 class MiScaleApp extends StatelessWidget {
   const MiScaleApp({super.key});
@@ -27,15 +29,8 @@ class MiScaleApp extends StatelessWidget {
   }
 }
 
-class HomeShell extends StatefulWidget {
+class HomeShell extends ConsumerWidget {
   const HomeShell({super.key});
-
-  @override
-  State<HomeShell> createState() => _HomeShellState();
-}
-
-class _HomeShellState extends State<HomeShell> {
-  int _index = 0;
 
   static const _pages = [
     ScanPage(),
@@ -45,12 +40,15 @@ class _HomeShellState extends State<HomeShell> {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final index = ref.watch(selectedTabProvider);
+
     return Scaffold(
-      body: IndexedStack(index: _index, children: _pages),
+      body: IndexedStack(index: index, children: _pages),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (value) => setState(() => _index = value),
+        selectedIndex: index,
+        onDestinationSelected:
+            ref.read(selectedTabProvider.notifier).select,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.monitor_weight_outlined),

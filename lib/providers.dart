@@ -30,6 +30,17 @@ final profilesProvider = StreamProvider<List<Profile>>(
   (ref) => ref.watch(databaseProvider).watchProfiles(),
 );
 
+/// Kartica koja je trenutno otvorena u donjoj navigaciji. Zaslon vaganja po
+/// njoj zna smije li skenirati — skener radi samo dok je vidljiv.
+final selectedTabProvider = NotifierProvider<SelectedTab, int>(SelectedTab.new);
+
+class SelectedTab extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void select(int index) => state = index;
+}
+
 /// Profil čija se povijest trenutno gleda; `null` znači "prvi dostupni".
 final selectedProfileIdProvider = NotifierProvider<SelectedProfile, int?>(
   SelectedProfile.new,

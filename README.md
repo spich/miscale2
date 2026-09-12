@@ -10,12 +10,19 @@ advertisementu (Body Composition Service, UUID `0x181B`, 13 bajtova). Aplikacija
 samo sluša okolinu dok je otvoren zaslon za vaganje, parsira paket i iz težine i
 bio-impedancije izračuna sastav tijela.
 
+Neke serije se javljaju pod nestandardnim servisom; njih se prepoznaje po imenu
+(`MIBFS`, `MIBCS`, `MI_SCALE`, `BLESmart_…`, `XMTZC`) i čita po duljini paketa.
+Kad vaga nije prepoznata, *Postavke → BLE dijagnostika* ispisuje sve
+advertisemente u dometu sa sirovim bajtovima.
+
 Podržan je i stariji Mi Scale v1 (`0x181D`, 10 bajtova), ali bez sastava tijela
 jer ta vaga ne mjeri impedanciju.
 
 ### Tijek vaganja
 
-1. Korisnik pokrene mjerenje i stane bos na vagu.
+1. Zaslon vaganja skenira sam od sebe dok je otvoren i aplikacija je u
+   prvom planu — korisnik samo stane bos na vagu. Skeniranje prestaje čim
+   se ode na drugu karticu ili u pozadinu.
 2. Vaga šalje težinu u realnom vremenu, zatim paket s postavljenim bitom
    "stabilizirano".
 3. Sekundu-dvije kasnije stiže paket s impedancijom. Ako izostane (npr. korisnik
