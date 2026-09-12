@@ -102,6 +102,12 @@ class AppDatabase extends _$AppDatabase {
     return query.watch();
   }
 
+  Future<Measurement?> measurementById(int id) =>
+      (select(measurements)..where((m) => m.id.equals(id))).getSingleOrNull();
+
+  Stream<Measurement?> watchMeasurement(int id) =>
+      (select(measurements)..where((m) => m.id.equals(id))).watchSingleOrNull();
+
   Future<Measurement?> latestMeasurement(int profileId) => (select(measurements)
         ..where((m) => m.profileId.equals(profileId))
         ..orderBy([

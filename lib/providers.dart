@@ -50,6 +50,13 @@ final currentProfileProvider = Provider<Profile?>((ref) {
   return profiles.where((p) => p.id == id).firstOrNull ?? profiles.first;
 });
 
+/// Prati jedno mjerenje, da zaslon rezultata vidi kad ga upis u Health
+/// označi kao poslano.
+final measurementProvider =
+    StreamProvider.family<Measurement?, int>((ref, id) {
+  return ref.watch(databaseProvider).watchMeasurement(id);
+});
+
 final measurementsProvider =
     StreamProvider.family<List<Measurement>, int>((ref, profileId) {
   return ref.watch(databaseProvider).watchMeasurements(profileId);

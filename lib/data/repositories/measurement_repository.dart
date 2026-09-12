@@ -72,17 +72,19 @@ class MeasurementRepository {
     );
 
     final saved = (await _db.latestMeasurement(profile.id))!;
-    if (profile.syncToHealth) {
-      await _syncOne(saved, metrics);
-    }
-    return saved;
+    if (!profile.syncToHealth) return saved;
+
+    await _syncOne(saved, metrics);
+    // Redak se čita ponovno jer ga je upis u Health u međuvremenu označio
+    // kao poslan — inače bi zaslon ostao na "čeka upis".
+    return await _db.measurementById(saved.id) ?? saved;
   }
 
   /// Šalje u Health sva mjerenja koja još nisu poslana (npr. jer dozvola
   /// tada nije bila odobrena).
   Future<int> syncPending(Profile profile) async {
     if (!profile.syncToHealth) return 0;
-    if (!await _health.hasPermissions()) return 0;
+    if (!await _ensureHealthPermissions()) return 0;
 
     final pending = await _db.unsyncedMeasurements(profile.id);
     final synced = <int>[];
@@ -93,7 +95,16 @@ class MeasurementRepository {
     return synced.length;
   }
 
+  /// Dozvola se traži tek kad zatreba, da korisnika ne dočeka upit prije
+  /// prvog vaganja.
+  Future<bool> _ensureHealthPermissions() async {
+    if (await _health.hasPermissions()) return true;
+    return _health.requestPermissions();
+  }
+
   Future<void> _syncOne(Measurement measurement, BodyMetrics? metrics) async {
+    if (!await _ensureHealthPermissions()) return;
+
     final ok = await _health.writeMeasurement(
       measuredAt: measurement.measuredAt,
       weightKg: measurement.weightKg,

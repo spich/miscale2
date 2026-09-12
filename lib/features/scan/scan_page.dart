@@ -224,7 +224,7 @@ class _ProfilePicker extends StatelessWidget {
   }
 }
 
-class _ResultView extends StatelessWidget {
+class _ResultView extends ConsumerWidget {
   const _ResultView({
     required this.measurement,
     required this.profile,
@@ -238,8 +238,12 @@ class _ResultView extends StatelessWidget {
   final VoidCallback onAgain;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    // Redak se prati iz baze jer upis u Health teče usporedno s prikazom.
+    final live = ref.watch(measurementProvider(measurement.id)).value ??
+        measurement;
+
     return ListView(
       children: [
         const SizedBox(height: 8),
@@ -249,7 +253,7 @@ class _ResultView extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
         Text(
-          formatWeight(measurement.weightKg),
+          formatWeight(live.weightKg),
           style: theme.textTheme.displayLarge?.copyWith(
             fontWeight: FontWeight.w300,
             color: theme.colorScheme.primary,
@@ -259,22 +263,38 @@ class _ResultView extends StatelessWidget {
         Text('kg', style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
         const SizedBox(height: 4),
         Text(
-          formatDateTime(measurement.measuredAt),
+          formatDateTime(live.measuredAt),
           style: theme.textTheme.bodySmall,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
         if (profile.syncToHealth)
-          Chip(
-            avatar: Icon(
-              measurement.syncedToHealth ? Icons.check : Icons.sync_problem,
-              size: 18,
-            ),
-            label: Text(
-              measurement.syncedToHealth
-                  ? 'Zapisano u Health'
-                  : 'Čeka upis u Health',
-            ),
+          Center(
+            child: live.syncedToHealth
+                ? const Chip(
+                    avatar: Icon(Icons.check, size: 18),
+                    label: Text('Zapisano u Health'),
+                  )
+                : ActionChip(
+                    avatar: const Icon(Icons.sync_problem, size: 18),
+                    label: const Text('Nije zapisano — pokušaj ponovno'),
+                    onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      final sent = await ref
+                          .read(measurementRepositoryProvider)
+                          .syncPending(profile);
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            sent > 0
+                                ? 'Zapisano u Health.'
+                                : 'Upis nije uspio — provjeri dozvolu u '
+                                    'postavkama.',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
         const SizedBox(height: 16),
         if (metrics == null)
