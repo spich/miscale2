@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/health/health_service.dart';
 import '../../providers.dart';
+import 'ble_diagnostics_page.dart';
 
 final healthAvailabilityProvider = FutureProvider<HealthAvailability>(
   (ref) => ref.watch(healthServiceProvider).availability(),
@@ -98,6 +99,19 @@ class SettingsPage extends ConsumerWidget {
                       ),
                     );
                   },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.bluetooth_searching),
+            title: const Text('BLE dijagnostika'),
+            subtitle: const Text(
+              'Ispis svih uređaja u dometu — kad aplikacija ne prepozna vagu',
+            ),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const BleDiagnosticsPage(),
+              ),
+            ),
           ),
           const Divider(),
           const AboutListTile(

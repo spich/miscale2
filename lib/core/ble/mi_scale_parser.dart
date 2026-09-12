@@ -15,10 +15,32 @@ class MiScaleParser {
   /// Weight Scale Service — Mi Scale v1 (oznaka MI_SCALE).
   static const int serviceUuid16Ws = 0x181D;
 
+  /// Imena pod kojima se Xiaomi vage javljaju. Neke serije ne koriste
+  /// standardni UUID, pa ih prepoznajemo po imenu i duljini paketa.
+  static const List<String> knownNamePrefixes = [
+    'MIBFS', // Mi Body Composition Scale 2
+    'MIBCS', // Mi Body Composition Scale
+    'MI_SCALE',
+    'MI SCALE',
+    'BLESMART', // starije serije Mi Smart Scale
+    'XMTZC', // oznaka modela na nekim serijama
+  ];
+
+  static bool isKnownScaleName(String? name) {
+    if (name == null || name.isEmpty) return false;
+    final upper = name.toUpperCase();
+    return knownNamePrefixes.any(upper.startsWith);
+  }
+
   /// Vraća `null` ako payload ne pripada poznatoj vagi ili je neispravan.
+  ///
+  /// [deviceName] je neobavezan: ako je uređaj po imenu prepoznata Xiaomi
+  /// vaga, paket se pokušava pročitati i kad je objavljen pod nestandardnim
+  /// servisom, jer se serije razlikuju.
   static ScaleReading? parse(
     Map<String, List<int>> serviceData, {
     required String deviceId,
+    String? deviceName,
   }) {
     for (final entry in serviceData.entries) {
       final uuid16 = _to16Bit(entry.key);
@@ -29,6 +51,18 @@ class MiScaleParser {
       }
       if (uuid16 == serviceUuid16Ws && bytes.length >= 10) {
         return _parseV1(bytes, deviceId);
+      }
+    }
+
+    if (!isKnownScaleName(deviceName)) return null;
+
+    // Poznata vaga pod nepoznatim servisom: odlučuje duljina paketa.
+    for (final bytes in serviceData.values) {
+      if (bytes.length == 13) {
+        return _parseV2(Uint8List.fromList(bytes), deviceId);
+      }
+      if (bytes.length == 10) {
+        return _parseV1(Uint8List.fromList(bytes), deviceId);
       }
     }
     return null;
