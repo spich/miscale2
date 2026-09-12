@@ -191,9 +191,13 @@ class _MeasurementTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final delta = previous == null
+    final difference = previous == null
         ? null
         : measurement.weightKg - previous!.weightKg;
+    // Razlika manja od dekagrama je šum vage, ne promjena težine.
+    final delta = difference != null && difference.abs() >= 0.05
+        ? difference
+        : null;
 
     return Dismissible(
       key: ValueKey(measurement.id),
@@ -210,7 +214,12 @@ class _MeasurementTile extends ConsumerWidget {
         title: Text('${formatWeight(measurement.weightKg)} kg'),
         subtitle: Text(formatDateTime(measurement.measuredAt)),
         trailing: delta == null
-            ? null
+            ? (difference == null
+                ? null
+                : Text(
+                    'bez promjene',
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ))
             : Text(
                 '${delta >= 0 ? '+' : '−'}${formatDecimal(delta.abs())} kg',
                 style: TextStyle(

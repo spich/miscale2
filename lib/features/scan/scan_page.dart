@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../core/ble/scale_scanner.dart';
 import '../../core/body/body_metrics.dart';
+import '../../core/body/body_rating.dart';
 import '../../core/format.dart';
 import '../../data/db/app_database.dart';
 import '../../providers.dart';
@@ -395,66 +396,80 @@ class _ResultView extends ConsumerWidget {
   }
 }
 
-List<MetricTile> metricTilesFor(BodyMetrics m) => [
-      MetricTile(
-        label: 'Tjelesna mast',
-        value: formatDecimal(m.fatPercentage),
-        unit: '%',
-        icon: Icons.water_drop_outlined,
-      ),
-      MetricTile(
-        label: 'Voda',
-        value: formatDecimal(m.waterPercentage),
-        unit: '%',
-        icon: Icons.opacity,
-      ),
-      MetricTile(
-        label: 'Mišićna masa',
-        value: formatDecimal(m.muscleMassKg),
-        unit: 'kg',
-        icon: Icons.fitness_center,
-      ),
-      MetricTile(
-        label: 'Kosti',
-        value: formatDecimal(m.boneMassKg),
-        unit: 'kg',
-        icon: Icons.accessibility_new,
-      ),
-      MetricTile(
-        label: 'BMI',
-        value: formatDecimal(m.bmi),
-        icon: Icons.straighten,
-      ),
-      MetricTile(
-        label: 'Proteini',
-        value: formatDecimal(m.proteinPercentage),
-        unit: '%',
-        icon: Icons.egg_outlined,
-      ),
-      MetricTile(
-        label: 'Visceralna mast',
-        value: formatDecimal(m.visceralFat),
-        icon: Icons.donut_small,
-      ),
-      MetricTile(
-        label: 'Bazalni metabolizam',
-        value: formatInteger(m.basalMetabolicRate),
-        unit: 'kcal',
-        icon: Icons.local_fire_department_outlined,
-      ),
-      MetricTile(
-        label: 'Metabolička dob',
-        value: formatInteger(m.metabolicAge),
-        unit: 'god.',
-        icon: Icons.cake_outlined,
-      ),
-      MetricTile(
-        label: 'Idealna težina',
-        value: formatDecimal(m.idealWeightKg),
-        unit: 'kg',
-        icon: Icons.flag_outlined,
-      ),
-    ];
+List<MetricTile> metricTilesFor(BodyMetrics m) {
+  final ratings = BodyRatings.of(m);
+
+  return [
+    MetricTile(
+      label: 'Tjelesna mast',
+      value: formatDecimal(m.fatPercentage),
+      unit: '%',
+      icon: Icons.water_drop_outlined,
+      rating: ratings.fatPercentage,
+    ),
+    MetricTile(
+      label: 'Voda',
+      value: formatDecimal(m.waterPercentage),
+      unit: '%',
+      icon: Icons.opacity,
+      rating: ratings.waterPercentage,
+    ),
+    MetricTile(
+      label: 'Mišićna masa',
+      value: formatDecimal(m.muscleMassKg),
+      unit: 'kg',
+      icon: Icons.fitness_center,
+      rating: ratings.muscleMass,
+    ),
+    MetricTile(
+      label: 'Kosti',
+      value: formatDecimal(m.boneMassKg),
+      unit: 'kg',
+      icon: Icons.accessibility_new,
+      rating: ratings.boneMass,
+    ),
+    MetricTile(
+      label: 'BMI',
+      value: formatDecimal(m.bmi),
+      icon: Icons.straighten,
+      rating: ratings.bmi,
+    ),
+    MetricTile(
+      label: 'Proteini',
+      value: formatDecimal(m.proteinPercentage),
+      unit: '%',
+      icon: Icons.egg_outlined,
+      rating: ratings.proteinPercentage,
+    ),
+    MetricTile(
+      label: 'Visceralna mast',
+      value: formatDecimal(m.visceralFat),
+      icon: Icons.donut_small,
+      rating: ratings.visceralFat,
+    ),
+    MetricTile(
+      label: 'Bazalni metabolizam',
+      value: formatInteger(m.basalMetabolicRate),
+      unit: 'kcal',
+      icon: Icons.local_fire_department_outlined,
+      rating: ratings.basalMetabolicRate,
+    ),
+    MetricTile(
+      label: 'Metabolička dob',
+      value: formatInteger(m.metabolicAge),
+      unit: 'god.',
+      icon: Icons.cake_outlined,
+      rating: ratings.metabolicAge,
+    ),
+    MetricTile(
+      label: 'Idealna težina',
+      value: formatDecimal(m.idealWeightKg),
+      unit: 'kg',
+      icon: Icons.flag_outlined,
+      rating: ratings.idealWeight,
+    ),
+  ];
+}
 
 class _FailureView extends StatelessWidget {
   const _FailureView({
