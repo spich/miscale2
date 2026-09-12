@@ -19,6 +19,8 @@ class HistoryPage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Povijest'),
         actions: [
+          if (profile != null)
+            _ExportButton(profile: profile, profileCount: profiles.length),
           if (profiles.length > 1 && profile != null)
             Padding(
               padding: const EdgeInsets.only(right: 12),
@@ -39,6 +41,58 @@ class HistoryPage extends ConsumerWidget {
           ? const Center(child: Text('Dodaj profil da bi vidio povijest.'))
           : _ProfileHistory(profile: profile),
     );
+  }
+}
+
+/// Izvoz mjerenja u CSV. Datoteka se dijeli sustavskim izbornikom jer je
+/// spremnik aplikacije korisniku nedostupan i na Androidu i na iOS-u.
+class _ExportButton extends ConsumerWidget {
+  const _ExportButton({required this.profile, required this.profileCount});
+
+  final Profile profile;
+  final int profileCount;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PopupMenuButton<bool>(
+      icon: const Icon(Icons.ios_share),
+      tooltip: 'Izvoz u CSV',
+      onSelected: (allProfiles) => _export(context, ref, allProfiles),
+      itemBuilder: (context) => [
+        PopupMenuItem(value: false, child: Text('Izvezi ${profile.name}')),
+        if (profileCount > 1)
+          const PopupMenuItem(value: true, child: Text('Izvezi sve profile')),
+      ],
+    );
+  }
+
+  Future<void> _export(
+    BuildContext context,
+    WidgetRef ref,
+    bool allProfiles,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final exporter = ref.read(measurementExporterProvider);
+    // iPad izbornik dijeljenja izlazi iz ishodišta koje mu se zada.
+    final box = context.findRenderObject() as RenderBox?;
+    final origin =
+        box == null ? null : box.localToGlobal(Offset.zero) & box.size;
+
+    try {
+      final count = allProfiles
+          ? await exporter.exportAll(shareOrigin: origin)
+          : await exporter.exportProfile(profile, shareOrigin: origin);
+
+      if (count == 0) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Nema mjerenja za izvoz.')),
+        );
+      }
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Izvoz nije uspio: $error')),
+      );
+    }
   }
 }
 

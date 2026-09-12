@@ -121,6 +121,24 @@ class AppDatabase extends _$AppDatabase {
   Future<int?> insertMeasurement(MeasurementsCompanion measurement) =>
       into(measurements).insertOnConflictUpdate(measurement);
 
+  Future<List<Measurement>> measurementsOf(int profileId) => (select(measurements)
+        ..where((m) => m.profileId.equals(profileId))
+        ..orderBy([(m) => OrderingTerm(expression: m.measuredAt)]))
+      .get();
+
+  /// Sva mjerenja sa svojim profilom — za izvoz.
+  Future<List<(Profile, Measurement)>> measurementsWithProfiles() async {
+    final query = select(measurements).join([
+      innerJoin(profiles, profiles.id.equalsExp(measurements.profileId)),
+    ])
+      ..orderBy([OrderingTerm(expression: measurements.measuredAt)]);
+
+    final rows = await query.get();
+    return [
+      for (final row in rows) (row.readTable(profiles), row.readTable(measurements)),
+    ];
+  }
+
   Future<List<Measurement>> unsyncedMeasurements(int profileId) =>
       (select(measurements)
             ..where((m) =>

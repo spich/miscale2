@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/ble/scale_scanner.dart';
 import 'core/health/health_service.dart';
 import 'data/db/app_database.dart';
+import 'data/export/measurement_exporter.dart';
 import 'data/repositories/measurement_repository.dart';
 
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -24,6 +25,10 @@ final measurementRepositoryProvider = Provider<MeasurementRepository>(
     ref.watch(databaseProvider),
     ref.watch(healthServiceProvider),
   ),
+);
+
+final measurementExporterProvider = Provider<MeasurementExporter>(
+  (ref) => MeasurementExporter(ref.watch(databaseProvider)),
 );
 
 final profilesProvider = StreamProvider<List<Profile>>(
