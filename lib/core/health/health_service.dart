@@ -25,6 +25,9 @@ class HealthService {
     if (Platform.isAndroid) ...[
       HealthDataType.BODY_WATER_MASS,
       HealthDataType.BASAL_ENERGY_BURNED,
+      // Koštanu masu HealthKit uopće nema; u Health Connect ide preko našeg
+      // forka paketa (spich/health, `BoneMassRecord`).
+      HealthDataType.BONE_MASS,
     ],
   ];
 
@@ -106,6 +109,11 @@ class HealthService {
       allOk &= await _write(
         HealthDataType.BASAL_ENERGY_BURNED,
         metrics.basalMetabolicRate,
+        measuredAt,
+      );
+      allOk &= await _write(
+        HealthDataType.BONE_MASS,
+        metrics.boneMassKg,
         measuredAt,
       );
     }
